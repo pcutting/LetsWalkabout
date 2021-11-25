@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">LetsWalkabout</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoicGhpbGlwY3V0dGluZyIsImEiOiJja3dkbndvendlNjJrMnVxMW9md2phaGpuIn0.MgWYYhQr4E8Xs5uqC4R62Q</string>
 </resources>
