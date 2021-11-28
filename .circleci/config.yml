@@ -13,9 +13,7 @@ orbs:
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
 
-  - run:
-      name: chmod permissions
-      command: chmod +x ./gradlew
+
 
   # Below is the definition of your job to build and test your app, you can rename and customize it as you want.
   build-and-test:
@@ -29,6 +27,10 @@ jobs:
     steps:
       # Checkout the code as the first step.
       - checkout
+
+      - run:
+          name: chmod permissions
+          command: chmod +x ./gradlew
 
       # The next step will run the unit tests
       - android/run-tests:
