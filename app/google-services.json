@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "673262278832",
+    "project_id": "lets-walkabout",
+    "storage_bucket": "lets-walkabout.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:673262278832:android:8831c2f9eb241a5295c375",
+        "android_client_info": {
+          "package_name": "com.philipcutting.letswalkabout"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "673262278832-hptq62t3e04ec2of6daf1041dj4hfh6u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.philipcutting.letswalkabout",
+            "certificate_hash": "67cecf8245d948e454487d30ec42ecc77fc187b7"
+          }
+        },
+        {
+          "client_id": "673262278832-1ubge3od9jbm1c1e5s1s0vb3kc8jlnfr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHASCTb5g7EfAQo1qmPFmrWXmSV01UvCI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "673262278832-1ubge3od9jbm1c1e5s1s0vb3kc8jlnfr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
