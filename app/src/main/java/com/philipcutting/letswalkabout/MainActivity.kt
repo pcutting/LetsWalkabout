@@ -1,5 +1,7 @@
 package com.philipcutting.letswalkabout
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -14,6 +16,7 @@ import com.mapbox.maps.plugin.locationcomponent.OnIndicatorBearingChangedListene
 import com.mapbox.maps.plugin.locationcomponent.OnIndicatorPositionChangedListener
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.philipcutting.letswalkabout.databinding.ActivityMainBinding
+import com.philipcutting.letswalkabout.models.PathPoint
 import java.lang.ref.WeakReference
 
 class MainActivity : AppCompatActivity() {
@@ -21,21 +24,40 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var locationPermissionHelper: LocationPermissionHelper
 
+    private var path: MutableList<PathPoint> = mutableListOf()
+
+    private var changeBearing = false
+    private var trackingLocationOnMap = true
+
+    private var lastBearing: Double? = null
+    private var lastPoint: Pair<Double,Double>? = null
+
+
     companion object {
         private const val TAG = "MainActivity"
     }
 
     private val onIndicatorBearingChangedListener = OnIndicatorBearingChangedListener {
-        Log.i(TAG, "onIndicatorBearingChangedListener")
-        mapView.getMapboxMap().setCamera(CameraOptions.Builder().bearing(it).build())
+        Log.i(TAG, "onIndicatorBearingChangedListener, Bearing: $it")
+        path.add(PathPoint(it))
+        if(changeBearing) {
+            mapView.getMapboxMap().setCamera(CameraOptions.Builder().bearing(it).build())
+        }
+
     }
 
     private val onIndicatorPositionChangedListener = OnIndicatorPositionChangedListener {
-        Log.i(TAG, "onIndicatorPositionChangedListener")
-        mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).build())
+        Log.i(TAG, "onIndicatorPositionChangedListener. positiong ${it.longitude()},${it.latitude()}")
 
-        //TODO verify if it should be .pixelForCoordinates(it) to center the walk.
-        mapView.gestures.focalPoint = mapView.getMapboxMap().pixelForCoordinate(it)
+        //TODO see if i need to add a sensitivity setting to this.  it doesn't need to be added too often.
+
+
+        if(trackingLocationOnMap) {
+            mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).build())
+
+            //TODO verify if it should be .pixelForCoordinates(it) to center the walk.
+            mapView.gestures.focalPoint = mapView.getMapboxMap().pixelForCoordinate(it)
+        }
     }
 
     private val onMoveListener = object : OnMoveListener {
@@ -58,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         Log.i(TAG, "onMapReady() entered. (passed function call.)")
         mapView.getMapboxMap().setCamera(
             CameraOptions.Builder()
-                .zoom(3.0)
+                .zoom(9.0)
                 .build()
         )
         mapView.getMapboxMap().loadStyleUri(
@@ -80,8 +102,34 @@ class MainActivity : AppCompatActivity() {
 
         mapView.location.addOnIndicatorPositionChangedListener {
             Log.i(TAG , "onCreate - addOnIndicator...")
-            mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).zoom(12.0).build())
+            //mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).zoom(12.0).build())
         }
+
+        binding.fabCurrentLocation.setOnClickListener {
+            trackingLocationOnMap = !trackingLocationOnMap
+
+            if(trackingLocationOnMap){
+                binding.fabCurrentLocation.backgroundTintList =
+                ColorStateList.valueOf(getColor(R.color.fab_primary))
+            } else {
+                binding.fabCurrentLocation.backgroundTintList =
+                    ColorStateList.valueOf(getColor(R.color.fab_alt))
+            }
+        }
+
+        binding.fabBarringOption.setOnClickListener {
+            changeBearing = !changeBearing
+
+            if(changeBearing){
+                //TODO change color of button when pressed
+                binding.fabBarringOption.backgroundTintList =
+                    ColorStateList.valueOf(getColor(R.color.fab_primary))
+            } else {
+                binding.fabBarringOption.backgroundTintList =
+                    ColorStateList.valueOf(getColor(R.color.fab_alt))
+            }
+        }
+
 
         locationPermissionHelper = LocationPermissionHelper(WeakReference(this))
         locationPermissionHelper.checkPermissions(onMapReady)
@@ -102,7 +150,6 @@ class MainActivity : AppCompatActivity() {
 
         locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener)
         locationComponentPlugin.addOnIndicatorBearingChangedListener(onIndicatorBearingChangedListener)
-
     }
 
     private fun removeListeners() {
@@ -113,7 +160,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun onCameraTrackingDismissed() {
         Toast.makeText(this, "onCameraTrackingDismissed", Toast.LENGTH_SHORT).show()
-        removeListeners()
+        //removeListeners()
+        this.trackingLocationOnMap = false
+        this.changeBearing = false
     }
 
     override fun onDestroy() {

@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">LetsWalkabout</string>
     <string name="mapbox_access_token">pk.eyJ1IjoicGhpbGlwY3V0dGluZyIsImEiOiJja3dkbndvendlNjJrMnVxMW9md2phaGpuIn0.MgWYYhQr4E8Xs5uqC4R62Q</string>
+    <string name="toggle_tracking_position">Toggle tracking position</string>
+    <string name="toggle_bearing_settings">Toggle bearing settings</string>
 </resources>
