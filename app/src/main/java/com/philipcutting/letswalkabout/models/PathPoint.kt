@@ -1,5 +1,7 @@
 package com.philipcutting.letswalkabout.models
 
+import com.mapbox.geojson.Point
+
 data class PathPoint(
     var latitude: Double?,
     var longitude: Double?,
@@ -9,8 +11,9 @@ data class PathPoint(
 
     constructor(bearing: Double): this(null, null, true, bearing)
     constructor(longitude: Double, latitude: Double): this(longitude,latitude, false, null)
+    constructor(point:Point): this(point.longitude(), point.latitude(),false, null)
 
-    fun isPoint():Boolean {
-        return !isBearingChange
-    }
+    fun isPoint():Boolean = !isBearingChange
+
+    fun toPoint(): Point = Point.fromLngLat(longitude ?: 0.0,latitude ?: 0.0)
 }
