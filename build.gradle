@@ -6,12 +6,15 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:7.0.3"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.0"
+        classpath 'com.android.tools.build:gradle:7.0.3'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.0'
 
         //Firebase
         classpath 'com.google.gms:google-services:4.3.10'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.8.0'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.8.1'
+
+        classpath 'com.google.dagger:hilt-android-gradle-plugin:2.38.1'
+
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -31,9 +34,9 @@ allprojects {
             credentials {
                 // Do not change the username below.
                 // This should always be `mapbox` (not your username).
-                username = "mapbox"
+                username = 'mapbox'
                 // Use the secret token you stored in gradle.properties as the password
-                password = project.properties['MAPBOX_DOWNLOADS_TOKEN'] ?: ""
+                password = project.properties['MAPBOX_DOWNLOADS_TOKEN'] ?: ''
             }
         }
     }
