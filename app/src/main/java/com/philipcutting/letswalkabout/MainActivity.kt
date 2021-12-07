@@ -4,7 +4,9 @@ import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModel
 import com.mapbox.android.gestures.MoveGestureDetector
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -24,6 +26,7 @@ import com.mapbox.maps.plugin.locationcomponent.OnIndicatorPositionChangedListen
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.philipcutting.letswalkabout.databinding.ActivityMainBinding
 import com.philipcutting.letswalkabout.models.PathPoint
+import com.philipcutting.letswalkabout.viewModels.MainViewModel
 import java.lang.ref.WeakReference
 
 class MainActivity : AppCompatActivity() {
@@ -34,20 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var annotationApi:AnnotationPlugin
     private lateinit var polylineAnnotationManager:PolylineAnnotationManager
 
-    private var pathList: MutableList<PathPoint> = mutableListOf()
-
-    private var changeBearing = false
-    private var trackingLocationOnMap = true
-
-    private val bearingDeltaSensitivityPositive = 5.0
-    private val bearingDeltaSensitivityNegative = bearingDeltaSensitivityPositive * -1
-
-    private var locationCounter = 0
-    private var locationIterator = 0
-
-    private var lastBearing: Double = 0.0
-    private var lastPoint: PathPoint? = null
-    private var addPointBecauseBearingChanged = true
+    private val viewModel : MainViewModel by viewModels()
 
     companion object {
         private const val TAG = "MainActivity"
@@ -56,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     private fun mapsPath(): List<Point>{
 
         var path = mutableListOf<Point>()
-        pathList.forEach {
+        viewModel.pathList.forEach {
             if(it.isPoint()) {
                 //Initially we will list every point.
                 //  Soon to filter out for change of directions to make lines.
@@ -71,28 +61,26 @@ class MainActivity : AppCompatActivity() {
 
     private val onIndicatorBearingChangedListener = OnIndicatorBearingChangedListener {
 
-        val delta = it-lastBearing
-        if(delta > bearingDeltaSensitivityPositive || delta < bearingDeltaSensitivityNegative) {
-            pathList.add(PathPoint(it))
-            addPointBecauseBearingChanged = true
-            Log.i(TAG, "Bearing: $it {Delta ${delta} : Sens.: $bearingDeltaSensitivityPositive * Counter: $locationCounter, iterator: $locationIterator")
-            lastBearing = it
+        val delta = it-viewModel.lastBearing
+        if(delta > viewModel.bearingDeltaSensitivityPositive || delta < viewModel.bearingDeltaSensitivityNegative) {
+            viewModel.pathList.add(PathPoint(it))
+            viewModel.addPointBecauseBearingChanged = true
+            Log.i(TAG, "Bearing: $it {Delta ${delta} : Sens.: ${viewModel.bearingDeltaSensitivityPositive} * Counter: ${viewModel.locationCounter}, iterator: ${viewModel.locationIterator}")
+            viewModel.lastBearing = it
         }
 
-
-
-        if(changeBearing) {
+        if(viewModel.changeBearing) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().bearing(it).build())
         }
     }
 
     private val onIndicatorPositionChangedListener = OnIndicatorPositionChangedListener {
-        locationCounter ++
+        viewModel.locationCounter ++
 
-        if(addPointBecauseBearingChanged) {
-            pathList.add(PathPoint(it))
-            locationIterator ++
-            addPointBecauseBearingChanged =  false
+        if(viewModel.addPointBecauseBearingChanged) {
+            viewModel.pathList.add(PathPoint(it))
+            viewModel.locationIterator ++
+            viewModel.addPointBecauseBearingChanged =  false
 
             //TODO("move this from here")
             val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
@@ -105,22 +93,14 @@ class MainActivity : AppCompatActivity() {
 
 //        Log.i(TAG, "Location Counter: $locationCounter, Location iterator: $locationIterator")
 
-        lastPoint = PathPoint(it)
+        viewModel.lastPoint = PathPoint(it)
 //        Log.i(TAG, "onIndicatorPositionChangedListener. position ${it.longitude()},${it.latitude()}")
-
-
-        //TODO see if i need to add a sensitivity setting to this.  it doesn't need to be added too often.
-
-
-//        pathList.add(PathPoint(it.longitude(), it.latitude()))
-        if(trackingLocationOnMap) {
+        if(viewModel.trackingLocationOnMap) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).build())
 
             //TODO verify if it should be .pixelForCoordinates(it) to center the walk.
             mapView.gestures.focalPoint = mapView.getMapboxMap().pixelForCoordinate(it)
         }
-
-
     }
 
     private val onMoveListener = object : OnMoveListener {
@@ -175,9 +155,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fabCurrentLocation.setOnClickListener {
-            trackingLocationOnMap = !trackingLocationOnMap
+            viewModel.trackingLocationOnMap = !viewModel.trackingLocationOnMap
 
-            if(trackingLocationOnMap){
+            if(viewModel.trackingLocationOnMap){
                 binding.fabCurrentLocation.backgroundTintList =
                 ColorStateList.valueOf(getColor(R.color.fab_primary))
             } else {
@@ -187,9 +167,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fabBarringOption.setOnClickListener {
-            changeBearing = !changeBearing
+            viewModel.changeBearing = !viewModel.changeBearing
 
-            if(changeBearing){
+            if(viewModel.changeBearing){
                 //TODO change color of button when pressed
                 binding.fabBarringOption.backgroundTintList =
                     ColorStateList.valueOf(getColor(R.color.fab_primary))
@@ -198,7 +178,6 @@ class MainActivity : AppCompatActivity() {
                     ColorStateList.valueOf(getColor(R.color.fab_alt))
             }
         }
-
 
         locationPermissionHelper = LocationPermissionHelper(WeakReference(this))
         locationPermissionHelper.checkPermissions(onMapReady)
@@ -228,10 +207,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onCameraTrackingDismissed() {
-        Toast.makeText(this, "onCameraTrackingDismissed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            this,
+            "onCameraTrackingDismissed",
+            Toast.LENGTH_SHORT).show()
         //removeListeners()
-        this.trackingLocationOnMap = false
-        this.changeBearing = false
+        viewModel.trackingLocationOnMap = false
+        viewModel.changeBearing = false
     }
 
     override fun onDestroy() {
