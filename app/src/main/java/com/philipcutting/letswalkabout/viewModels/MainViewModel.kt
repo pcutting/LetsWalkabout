@@ -1,22 +1,36 @@
 package com.philipcutting.letswalkabout.viewModels
 
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.philipcutting.letswalkabout.utilities.SingleLiveEvent
 import com.philipcutting.letswalkabout.models.PathPoint
 
 class MainViewModel : ViewModel() {
-    var pathList: MutableList<PathPoint> = mutableListOf()
 
-    var changeBearing = false
-    var trackingLocationOnMap = true
+    companion object {
+        const val bearingDeltaSensitivityPositive = 5.0
+        const val bearingDeltaSensitivityNegative = bearingDeltaSensitivityPositive * -1
+    }
 
-    val bearingDeltaSensitivityPositive = 5.0
-    val bearingDeltaSensitivityNegative = bearingDeltaSensitivityPositive * -1
+    var hasChangedBearing  = SingleLiveEvent<Boolean>().apply {
+        value = false
+    }
 
-    var locationCounter = 0
-    var locationIterator = 0
+    var isTrackingLocationOnMap = SingleLiveEvent<Boolean>().apply {
+        value = true
+    }
 
-    var lastBearing: Double = 0.0
-    var lastPoint: PathPoint? = null
-    var addPointBecauseBearingChanged = true
+    var addPointBecauseBearingChanged = SingleLiveEvent<Boolean>().apply {
+        value = true
+    }
+
+    var pathList = MutableLiveData<MutableList<PathPoint>>()
+
+    var locationCounter = MutableLiveData(0)
+    var locationIterator = MutableLiveData(0)
+
+    var lastBearing = MutableLiveData<Double>(0.0)
+    var lastPoint= MutableLiveData<PathPoint?>(null)
+
 
 }

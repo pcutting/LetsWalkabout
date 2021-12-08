@@ -6,15 +6,12 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModel
 import com.mapbox.android.gestures.MoveGestureDetector
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
-import com.mapbox.maps.plugin.annotation.Annotation
 import com.mapbox.maps.plugin.annotation.AnnotationPlugin
-import com.mapbox.maps.plugin.annotation.AnnotationType
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
@@ -46,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private fun mapsPath(): List<Point>{
 
         var path = mutableListOf<Point>()
-        viewModel.pathList.forEach {
+        viewModel.pathList.value?.forEach {
             if(it.isPoint()) {
                 //Initially we will list every point.
                 //  Soon to filter out for change of directions to make lines.
@@ -61,26 +58,26 @@ class MainActivity : AppCompatActivity() {
 
     private val onIndicatorBearingChangedListener = OnIndicatorBearingChangedListener {
 
-        val delta = it-viewModel.lastBearing
-        if(delta > viewModel.bearingDeltaSensitivityPositive || delta < viewModel.bearingDeltaSensitivityNegative) {
-            viewModel.pathList.add(PathPoint(it))
-            viewModel.addPointBecauseBearingChanged = true
-            Log.i(TAG, "Bearing: $it {Delta ${delta} : Sens.: ${viewModel.bearingDeltaSensitivityPositive} * Counter: ${viewModel.locationCounter}, iterator: ${viewModel.locationIterator}")
-            viewModel.lastBearing = it
+        val delta = it-(viewModel.lastBearing.value ?: it)
+        if(delta > MainViewModel.bearingDeltaSensitivityPositive || delta < MainViewModel.bearingDeltaSensitivityNegative) {
+            viewModel.pathList.value?.add(PathPoint(it))
+            viewModel.addPointBecauseBearingChanged.value = true
+            Log.i(TAG, "Bearing: $it {Delta ${delta} : Sens.: ${MainViewModel.bearingDeltaSensitivityPositive} * Counter: ${viewModel.locationCounter}, iterator: ${viewModel.locationIterator}")
+            viewModel.lastBearing.value = it
         }
 
-        if(viewModel.changeBearing) {
+        if(viewModel.hasChangedBearing.value == true) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().bearing(it).build())
         }
     }
 
     private val onIndicatorPositionChangedListener = OnIndicatorPositionChangedListener {
-        viewModel.locationCounter ++
+        viewModel.locationCounter.value =+ 1
 
-        if(viewModel.addPointBecauseBearingChanged) {
-            viewModel.pathList.add(PathPoint(it))
-            viewModel.locationIterator ++
-            viewModel.addPointBecauseBearingChanged =  false
+        if(viewModel.addPointBecauseBearingChanged.value == true) {
+            viewModel.pathList.value?.add(PathPoint(it))
+            viewModel.locationIterator.value =+ 1
+            viewModel.addPointBecauseBearingChanged.value =  false
 
             //TODO("move this from here")
             val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
@@ -93,9 +90,9 @@ class MainActivity : AppCompatActivity() {
 
 //        Log.i(TAG, "Location Counter: $locationCounter, Location iterator: $locationIterator")
 
-        viewModel.lastPoint = PathPoint(it)
+        viewModel.lastPoint.value = PathPoint(it)
 //        Log.i(TAG, "onIndicatorPositionChangedListener. position ${it.longitude()},${it.latitude()}")
-        if(viewModel.trackingLocationOnMap) {
+        if(viewModel.isTrackingLocationOnMap.value == true) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).build())
 
             //TODO verify if it should be .pixelForCoordinates(it) to center the walk.
@@ -155,9 +152,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fabCurrentLocation.setOnClickListener {
-            viewModel.trackingLocationOnMap = !viewModel.trackingLocationOnMap
+            viewModel.isTrackingLocationOnMap.value = viewModel.isTrackingLocationOnMap.value == false
 
-            if(viewModel.trackingLocationOnMap){
+            if(viewModel.isTrackingLocationOnMap.value == true){
                 binding.fabCurrentLocation.backgroundTintList =
                 ColorStateList.valueOf(getColor(R.color.fab_primary))
             } else {
@@ -167,9 +164,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fabBarringOption.setOnClickListener {
-            viewModel.changeBearing = !viewModel.changeBearing
+            viewModel.hasChangedBearing.value = viewModel.hasChangedBearing.value == false
 
-            if(viewModel.changeBearing){
+            if(viewModel.hasChangedBearing.value == true){
                 //TODO change color of button when pressed
                 binding.fabBarringOption.backgroundTintList =
                     ColorStateList.valueOf(getColor(R.color.fab_primary))
@@ -212,8 +209,8 @@ class MainActivity : AppCompatActivity() {
             "onCameraTrackingDismissed",
             Toast.LENGTH_SHORT).show()
         //removeListeners()
-        viewModel.trackingLocationOnMap = false
-        viewModel.changeBearing = false
+        viewModel.isTrackingLocationOnMap.value = false
+        viewModel.hasChangedBearing.value = false
     }
 
     override fun onDestroy() {
