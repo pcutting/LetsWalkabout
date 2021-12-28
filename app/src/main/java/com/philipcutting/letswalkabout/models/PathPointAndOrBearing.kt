@@ -2,7 +2,7 @@ package com.philipcutting.letswalkabout.models
 
 import com.mapbox.geojson.Point
 
-data class PathPoint(
+data class PathPointAndOrBearing(
     var latitude: Double?,
     var longitude: Double?,
     var isBearingChange: Boolean = false,

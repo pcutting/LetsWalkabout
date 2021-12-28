@@ -18,8 +18,7 @@ import com.mapbox.maps.plugin.locationcomponent.OnIndicatorBearingChangedListene
 import com.mapbox.maps.plugin.locationcomponent.OnIndicatorPositionChangedListener
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.philipcutting.letswalkabout.databinding.ActivityMainBinding
-import com.philipcutting.letswalkabout.models.PathPoint
-import com.philipcutting.letswalkabout.utilities.toScaledDouble
+import com.philipcutting.letswalkabout.models.PathPointAndOrBearing
 import com.philipcutting.letswalkabout.viewModels.MainViewModel
 import java.lang.ref.WeakReference
 
@@ -46,8 +45,8 @@ class MainActivity : AppCompatActivity() {
             return@OnIndicatorPositionChangedListener
         }
 
-        viewModel.setLocationOnChanged(it)
-        viewModel.lastPoint.value = PathPoint(it)
+        viewModel.setPointOnChangedLocation(it)
+        viewModel.lastPointOrBearing.value = PathPointAndOrBearing(it)
         if(viewModel.isTrackingLocationOnMap.value == true) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).build())
             mapView.gestures.focalPoint = mapView.getMapboxMap().pixelForCoordinate(it)
