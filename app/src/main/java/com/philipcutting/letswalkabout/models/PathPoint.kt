@@ -12,6 +12,8 @@ data class PathPoint(
     constructor(bearing: Double): this(null, null, true, bearing)
     constructor(longitude: Double, latitude: Double): this(longitude,latitude, false, null)
     constructor(point:Point): this(point.longitude(), point.latitude(),false, null)
+    constructor(point:Pair<Double,Double>): this(point.first, point.second,false, null)
+
 
     fun isPoint():Boolean = !isBearingChange
 

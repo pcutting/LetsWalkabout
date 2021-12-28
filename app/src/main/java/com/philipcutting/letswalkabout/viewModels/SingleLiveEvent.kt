@@ -1,4 +1,4 @@
-package com.philipcutting.letswalkabout.utilities
+package com.philipcutting.letswalkabout.viewModels
 
 import android.util.Log
 import androidx.annotation.MainThread
