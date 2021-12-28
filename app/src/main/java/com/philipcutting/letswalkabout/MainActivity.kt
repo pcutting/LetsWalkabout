@@ -6,18 +6,11 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModel
 import com.mapbox.android.gestures.MoveGestureDetector
-import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
-import com.mapbox.maps.plugin.annotation.Annotation
-import com.mapbox.maps.plugin.annotation.AnnotationPlugin
-import com.mapbox.maps.plugin.annotation.AnnotationType
 import com.mapbox.maps.plugin.annotation.annotations
-import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
 import com.mapbox.maps.plugin.gestures.OnMoveListener
 import com.mapbox.maps.plugin.gestures.gestures
@@ -25,7 +18,7 @@ import com.mapbox.maps.plugin.locationcomponent.OnIndicatorBearingChangedListene
 import com.mapbox.maps.plugin.locationcomponent.OnIndicatorPositionChangedListener
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.philipcutting.letswalkabout.databinding.ActivityMainBinding
-import com.philipcutting.letswalkabout.models.PathPoint
+import com.philipcutting.letswalkabout.models.PathPointAndOrBearing
 import com.philipcutting.letswalkabout.viewModels.MainViewModel
 import java.lang.ref.WeakReference
 
@@ -34,77 +27,34 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var locationPermissionHelper: LocationPermissionHelper
 
-    private lateinit var annotationApi:AnnotationPlugin
-    private lateinit var polylineAnnotationManager:PolylineAnnotationManager
-
     private val viewModel : MainViewModel by viewModels()
 
     companion object {
         private const val TAG = "MainActivity"
     }
 
-    private fun mapsPath(): List<Point>{
-
-        var path = mutableListOf<Point>()
-        viewModel.pathList.forEach {
-            if(it.isPoint()) {
-                //Initially we will list every point.
-                //  Soon to filter out for change of directions to make lines.
-                path.add(Point.fromLngLat(it.longitude ?: 0.0,it.latitude ?: 0.0))
-            }
-        }
-
-        Log.d(TAG, "Points returned: [${path.size}]")
-
-        return path.toList()
-    }
-
     private val onIndicatorBearingChangedListener = OnIndicatorBearingChangedListener {
-
-        val delta = it-viewModel.lastBearing
-        if(delta > viewModel.bearingDeltaSensitivityPositive || delta < viewModel.bearingDeltaSensitivityNegative) {
-            viewModel.pathList.add(PathPoint(it))
-            viewModel.addPointBecauseBearingChanged = true
-            Log.i(TAG, "Bearing: $it {Delta ${delta} : Sens.: ${viewModel.bearingDeltaSensitivityPositive} * Counter: ${viewModel.locationCounter}, iterator: ${viewModel.locationIterator}")
-            viewModel.lastBearing = it
-        }
-
-        if(viewModel.changeBearing) {
+        viewModel.setBearingOnChanged(it)
+        if(viewModel.hasChangedBearing.value == true) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().bearing(it).build())
         }
     }
 
     private val onIndicatorPositionChangedListener = OnIndicatorPositionChangedListener {
-        viewModel.locationCounter ++
-
-        if(viewModel.addPointBecauseBearingChanged) {
-            viewModel.pathList.add(PathPoint(it))
-            viewModel.locationIterator ++
-            viewModel.addPointBecauseBearingChanged =  false
-
-            //TODO("move this from here")
-            val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
-                .withPoints(mapsPath())
-                .withLineColor("#FF0000")
-                .withLineWidth(12.0)
-
-            polylineAnnotationManager.create(polylineAnnotationOptions)
+        if(it.latitude() == 0.0 ||  it.longitude() == 0.0) {
+            return@OnIndicatorPositionChangedListener
         }
 
-//        Log.i(TAG, "Location Counter: $locationCounter, Location iterator: $locationIterator")
-
-        viewModel.lastPoint = PathPoint(it)
-//        Log.i(TAG, "onIndicatorPositionChangedListener. position ${it.longitude()},${it.latitude()}")
-        if(viewModel.trackingLocationOnMap) {
+        viewModel.setPointOnChangedLocation(it)
+        viewModel.lastPointOrBearing.value = PathPointAndOrBearing(it)
+        if(viewModel.isTrackingLocationOnMap.value == true) {
             mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).build())
-
-            //TODO verify if it should be .pixelForCoordinates(it) to center the walk.
             mapView.gestures.focalPoint = mapView.getMapboxMap().pixelForCoordinate(it)
         }
     }
 
     private val onMoveListener = object : OnMoveListener {
-        // These are for moving of the map, not the users location.
+        // These are for moving of the map view, not the users location.
 
         override fun onMove(detector: MoveGestureDetector): Boolean {
 //            Log.i(TAG, "onMove")
@@ -122,10 +72,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val onMapReady: () -> Unit = {
-//        Log.i(TAG, "onMapReady() entered. (passed function call.)")
         mapView.getMapboxMap().setCamera(
             CameraOptions.Builder()
-                .zoom(9.0)
+                .zoom(16.0)
                 .build()
         )
         mapView.getMapboxMap().loadStyleUri(
@@ -135,7 +84,6 @@ class MainActivity : AppCompatActivity() {
             initLocationComponent()
             setupGesturesListener()
         }
-//        Log.i(TAG, "onMapReady() finished")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -145,42 +93,53 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         Log.i(TAG, "onCreate")
 
-        annotationApi = mapView.annotations
-        polylineAnnotationManager =
-            annotationApi.createPolylineAnnotationManager(mapView)
+        viewModel.annotationApi = mapView.annotations
+        viewModel.polylineAnnotationManager =
+            viewModel.annotationApi.createPolylineAnnotationManager(mapView)
 
         mapView.location.addOnIndicatorPositionChangedListener {
-//            Log.i(TAG , "onCreate - addOnIndicator...")
-            //mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).zoom(12.0).build())
+            Log.d(TAG, "Indicator position changed.")
         }
 
         binding.fabCurrentLocation.setOnClickListener {
-            viewModel.trackingLocationOnMap = !viewModel.trackingLocationOnMap
-
-            if(viewModel.trackingLocationOnMap){
-                binding.fabCurrentLocation.backgroundTintList =
-                ColorStateList.valueOf(getColor(R.color.fab_primary))
-            } else {
-                binding.fabCurrentLocation.backgroundTintList =
-                    ColorStateList.valueOf(getColor(R.color.fab_alt))
-            }
+            fabCurrentLocationOnClick()
         }
 
         binding.fabBarringOption.setOnClickListener {
-            viewModel.changeBearing = !viewModel.changeBearing
-
-            if(viewModel.changeBearing){
-                //TODO change color of button when pressed
-                binding.fabBarringOption.backgroundTintList =
-                    ColorStateList.valueOf(getColor(R.color.fab_primary))
-            } else {
-                binding.fabBarringOption.backgroundTintList =
-                    ColorStateList.valueOf(getColor(R.color.fab_alt))
-            }
+            fabBearingOptionOnClick()
         }
 
         locationPermissionHelper = LocationPermissionHelper(WeakReference(this))
         locationPermissionHelper.checkPermissions(onMapReady)
+
+        viewModel.pathList.observe(this){
+            Log.i(TAG, "pathList Observer : ${it.size}")
+        }
+    }
+
+    private fun fabBearingOptionOnClick() {
+        viewModel.hasChangedBearing.value = viewModel.hasChangedBearing.value == false
+
+        if (viewModel.hasChangedBearing.value == true) {
+            //TODO change color of button when pressed
+            binding.fabBarringOption.backgroundTintList =
+                ColorStateList.valueOf(getColor(R.color.fab_primary))
+        } else {
+            binding.fabBarringOption.backgroundTintList =
+                ColorStateList.valueOf(getColor(R.color.fab_alt))
+        }
+    }
+
+    private fun fabCurrentLocationOnClick() {
+        viewModel.isTrackingLocationOnMap.value = viewModel.isTrackingLocationOnMap.value == false
+
+        if (viewModel.isTrackingLocationOnMap.value == true) {
+            binding.fabCurrentLocation.backgroundTintList =
+                ColorStateList.valueOf(getColor(R.color.fab_primary))
+        } else {
+            binding.fabCurrentLocation.backgroundTintList =
+                ColorStateList.valueOf(getColor(R.color.fab_alt))
+        }
     }
 
     private fun setupGesturesListener() {
@@ -193,7 +152,6 @@ class MainActivity : AppCompatActivity() {
         val locationComponentPlugin = mapView.location
         locationComponentPlugin.updateSettings {
             this.enabled = true
-
         }
 
         locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener)
@@ -211,9 +169,8 @@ class MainActivity : AppCompatActivity() {
             this,
             "onCameraTrackingDismissed",
             Toast.LENGTH_SHORT).show()
-        //removeListeners()
-        viewModel.trackingLocationOnMap = false
-        viewModel.changeBearing = false
+        viewModel.isTrackingLocationOnMap.value = false
+        viewModel.hasChangedBearing.value = false
     }
 
     override fun onDestroy() {
