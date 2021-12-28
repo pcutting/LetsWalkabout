@@ -11,7 +11,6 @@ import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
 import com.philipcutting.letswalkabout.models.PathPointAndOrBearing
 
 class MainViewModel : ViewModel() {
-
     companion object {
         private const val TAG = "MainViewModel"
         const val bearingDeltaSensitivityPositive = 5
@@ -32,7 +31,6 @@ class MainViewModel : ViewModel() {
     var addPointBecauseBearingChanged = SingleLiveEvent<Boolean>().apply {
         value = true
     }
-
 
     private val _pathList = MutableLiveData<MutableList<Point?>>(emptyList<Point>().toMutableList())
     val pathList: LiveData<MutableList<Point?>> = _pathList

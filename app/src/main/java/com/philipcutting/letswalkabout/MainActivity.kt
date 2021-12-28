@@ -98,8 +98,7 @@ class MainActivity : AppCompatActivity() {
             viewModel.annotationApi.createPolylineAnnotationManager(mapView)
 
         mapView.location.addOnIndicatorPositionChangedListener {
-//            Log.i(TAG , "onCreate - addOnIndicator...")
-            //mapView.getMapboxMap().setCamera(CameraOptions.Builder().center(it).zoom(12.0).build())
+            Log.d(TAG, "Indicator position changed.")
         }
 
         binding.fabCurrentLocation.setOnClickListener {
@@ -113,12 +112,9 @@ class MainActivity : AppCompatActivity() {
         locationPermissionHelper = LocationPermissionHelper(WeakReference(this))
         locationPermissionHelper.checkPermissions(onMapReady)
 
-
         viewModel.pathList.observe(this){
             Log.i(TAG, "pathList Observer : ${it.size}")
         }
-
-
     }
 
     private fun fabBearingOptionOnClick() {
@@ -156,7 +152,6 @@ class MainActivity : AppCompatActivity() {
         val locationComponentPlugin = mapView.location
         locationComponentPlugin.updateSettings {
             this.enabled = true
-
         }
 
         locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener)
@@ -174,7 +169,6 @@ class MainActivity : AppCompatActivity() {
             this,
             "onCameraTrackingDismissed",
             Toast.LENGTH_SHORT).show()
-        //removeListeners()
         viewModel.isTrackingLocationOnMap.value = false
         viewModel.hasChangedBearing.value = false
     }
