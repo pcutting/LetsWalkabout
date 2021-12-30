@@ -54,7 +54,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.2'
 
     //Mapbox
-    implementation 'com.mapbox.maps:android:10.1.0'
+    implementation 'com.mapbox.maps:android:10.2.0'
     implementation 'com.mapbox.navigation:android:2.0.2'
 
     //Mapbox external dependencies
