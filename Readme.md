@@ -21,3 +21,43 @@ Requirements
    their map
 
 * Example Design You can purchase the full UI pack here: https://ui8.net/products/keira-ios-ui-kit
+
+
+References: 
+Style Data Listeners for geoJson: https://github.com/mapbox/mapbox-maps-android/pull/718/files
+
+
+In main Activity I was able to with the following code to draw a predefined path.  But I wasn't able
+to dynamically update it:
+
+```
+//        mapView.getMapboxMap().getStyle { style ->
+//
+//            val testPath = arrayListOf<Point>(
+//                Point.fromLngLat(23.3129909, 42.66594740),
+//                Point.fromLngLat(23.3129909, 42.6659474),
+//                Point.fromLngLat(23.312228430009565, 42.66589287000068),
+//                Point.fromLngLat(23.3117390595374, 42.665942498188734),
+//                Point.fromLngLat(23.1953, 42.6377,),
+//                Point.fromLngLat(23.310123353011488, 42.66610732903864),
+//                Point.fromLngLat(23.309381942956698, 42.66618467417269),
+//                Point.fromLngLat(23.308231339373087, 42.66630470705846),
+//                Point.fromLngLat(23.30728735837411, 42.66640318473142),
+//                Point.fromLngLat(23.30696417501965, 42.66644107083942),
+//                Point.fromLngLat(23.306600593736853, 42.66648369271197),
+//                Point.fromLngLat(23.4453, 42.7830),
+//                Point.fromLngLat(23.306625838599505, 42.66651449489985),
+//                Point.fromLngLat(23.30665860999862, 42.666524314999585),
+//                Point.fromLngLat(23.306691497203147, 42.66653416980095),
+//                Point.fromLngLat(23.3067223, 42.6665434)
+//            )
+
+//            val lineString = LineString.fromLngLats(testPath)
+//
+//            val feature = Feature.fromGeometry(lineString)
+//            val geoJsonSource = GeoJsonSource.Builder("geoJson_source").feature(feature).build()
+//
+//            style.addSource(geoJsonSource)
+//            style.addLayer(LineLayer("geoJson_source", "geoJson_source"))
+//        }
+```

@@ -1,13 +1,9 @@
 package com.philipcutting.letswalkabout.viewModels
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.mapbox.geojson.Point
-import com.mapbox.maps.plugin.annotation.AnnotationPlugin
-import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
 import com.philipcutting.letswalkabout.models.PathPointAndOrBearing
 
 class MainViewModel : ViewModel() {
@@ -16,8 +12,6 @@ class MainViewModel : ViewModel() {
         const val bearingDeltaSensitivityPositive = 5
         const val bearingDeltaSensitivityNegative = bearingDeltaSensitivityPositive * -1
     }
-
-
 
     private val _pathList = MutableLiveData<MutableList<Point?>>(emptyList<Point>().toMutableList())
     val pathList: LiveData<MutableList<Point?>> = _pathList
@@ -56,7 +50,6 @@ class MainViewModel : ViewModel() {
 
     fun setPointOnChangedLocation(point: Point){
         locationCounter.value =(locationCounter.value ?: 0) + 1
-//        Log.d(TAG, "save point 0")
         if(addPointBecauseBearingChanged.value != true || !rulesForVerifyingLegitLocation(point) ) {
             return
         }
