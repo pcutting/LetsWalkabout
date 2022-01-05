@@ -6,12 +6,26 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.mapbox.android.gestures.Constants
 import com.mapbox.android.gestures.MoveGestureDetector
+import com.mapbox.core.constants.Constants.PRECISION_6
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.LineString
 import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapEvents
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import com.mapbox.maps.extension.observable.eventdata.StyleDataLoadedEventData
+import com.mapbox.maps.extension.style.sources.addSource
+import com.mapbox.maps.extension.style.sources.generated.GeoJsonSource
+import com.mapbox.maps.extension.style.sources.generated.geoJsonSource
+import com.mapbox.maps.extension.style.sources.getSourceAs
+import com.mapbox.maps.plugin.annotation.AnnotationPlugin
 import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
+import com.mapbox.maps.plugin.delegates.listeners.OnStyleDataLoadedListener
 import com.mapbox.maps.plugin.gestures.OnMoveListener
 import com.mapbox.maps.plugin.gestures.gestures
 import com.mapbox.maps.plugin.locationcomponent.OnIndicatorBearingChangedListener
@@ -27,10 +41,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var locationPermissionHelper: LocationPermissionHelper
 
+    lateinit var annotationApi: AnnotationPlugin
+    lateinit var polylineAnnotationManager: PolylineAnnotationManager
+
     private val viewModel : MainViewModel by viewModels()
 
     companion object {
         private const val TAG = "MainActivity"
+        private const val GEOJSON_SOURCE_ID = "geojson_source_id"
     }
 
     private val onIndicatorBearingChangedListener = OnIndicatorBearingChangedListener {
@@ -53,24 +71,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val onMoveListener = object : OnMoveListener {
-        // These are for moving of the map view, not the users location.
-
-        override fun onMove(detector: MoveGestureDetector): Boolean {
-//            Log.i(TAG, "onMove")
-            return false
-        }
-
-        override fun onMoveBegin(detector: MoveGestureDetector) {
-//            Log.i(TAG, "onMoveBegin")
-            onCameraTrackingDismissed()
-        }
-
-        override fun onMoveEnd(detector: MoveGestureDetector) {
-//            Log.i(TAG, "OnMoveListener called onMoveEnd")
-        }
-    }
-
     private val onMapReady: () -> Unit = {
         mapView.getMapboxMap().setCamera(
             CameraOptions.Builder()
@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
             Log.i(TAG, "onMapReady: .loadStyleUri")
             initLocationComponent()
             setupGesturesListener()
+            setupDataEventListener()
         }
     }
 
@@ -91,15 +92,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         mapView = binding.mapView
         setContentView(binding.root)
-        Log.i(TAG, "onCreate")
-
-        viewModel.annotationApi = mapView.annotations
-        viewModel.polylineAnnotationManager =
-            viewModel.annotationApi.createPolylineAnnotationManager(mapView)
-
-        mapView.location.addOnIndicatorPositionChangedListener {
-            Log.d(TAG, "Indicator position changed.")
-        }
+        annotationApi = mapView.annotations
+        polylineAnnotationManager = annotationApi.createPolylineAnnotationManager(mapView)
+        val polylineAnnotationOptions: PolylineAnnotationOptions = PolylineAnnotationOptions()
+            .withPoints(emptyList())
+            .withLineColor("#FF1122")
+            .withLineWidth(5.0)
+        polylineAnnotationManager.create(polylineAnnotationOptions)
 
         binding.fabCurrentLocation.setOnClickListener {
             fabCurrentLocationOnClick()
@@ -113,7 +112,34 @@ class MainActivity : AppCompatActivity() {
         locationPermissionHelper.checkPermissions(onMapReady)
 
         viewModel.pathList.observe(this){
-            Log.i(TAG, "pathList Observer : ${it.size}")
+            if (viewModel.mapsPath().size < 5) return@observe
+
+            mapView.getMapboxMap().getStyle { style ->
+                val lineString = LineString.fromLngLats(viewModel.mapsPath())
+                val feature = Feature.fromGeometry(lineString)
+
+                // Also tried the following, but still didn't have success.
+                /*val source = style.getSourceAs<GeoJsonSource>(GEOJSON_SOURCE_ID)
+                if (source != null && feature.geometry() != null) {
+                    source.feature(feature)
+                    source.data("some data")
+                }*/
+
+                val geoJsonSourceItem = GeoJsonSource.Builder(GEOJSON_SOURCE_ID)
+                    .data("path")
+                    .feature(feature)
+                    .build()
+
+                if(style.styleSourceExists(GEOJSON_SOURCE_ID)) {
+                    style.removeStyleSource(GEOJSON_SOURCE_ID)
+                }
+
+                if (geoJsonSourceItem.data == null) {
+                    Log.e(TAG, "data is null")
+                } else {
+                    style.addSource(geoJsonSourceItem)
+                }
+            }
         }
     }
 
@@ -153,7 +179,6 @@ class MainActivity : AppCompatActivity() {
         locationComponentPlugin.updateSettings {
             this.enabled = true
         }
-
         locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener)
         locationComponentPlugin.addOnIndicatorBearingChangedListener(onIndicatorBearingChangedListener)
     }
@@ -171,6 +196,34 @@ class MainActivity : AppCompatActivity() {
             Toast.LENGTH_SHORT).show()
         viewModel.isTrackingLocationOnMap.value = false
         viewModel.hasChangedBearing.value = false
+    }
+
+    private fun setupDataEventListener() {
+        Log.i(TAG, "setupDataEventListener()")
+        mapView.getMapboxMap().addOnStyleDataLoadedListener(onMapEventsStyleDataLoaded)
+    }
+
+    private val onMapEventsStyleDataLoaded = OnStyleDataLoadedListener{ eventData ->
+        Log.e(TAG, "onStyleDataLoaded: $eventData")
+        if (eventData == null) {
+            Log.e(TAG, "data is null")
+        } else {
+            Log.e(TAG, "data is not null")
+        }
+    }
+
+    private val onMoveListener = object : OnMoveListener {
+        override fun onMove(detector: MoveGestureDetector): Boolean {
+
+            return false
+        }
+
+        override fun onMoveBegin(detector: MoveGestureDetector) {
+            onCameraTrackingDismissed()
+        }
+
+        override fun onMoveEnd(detector: MoveGestureDetector) {
+        }
     }
 
     override fun onDestroy() {
